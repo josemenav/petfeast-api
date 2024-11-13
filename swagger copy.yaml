@@ -1,0 +1,849 @@
+openapi: 3.0.0
+info:
+  description: Device Entitlement Microservice acts as a gateway for external Dish applications like SOM, WHAPI and Nokia-ES to fetch entitlement information from EntitlementDB.
+  version: 1.0.0
+  title: 'DSIM SERVERLESS :: Device-Entitlements'
+  contact:
+    email: dish-it-india-wireless-dsim@dish.com
+  license:
+    name: DISH Internal Use Only
+    url: https://dish.com
+servers:
+  - url: /
+tags:
+  - name: CRUD Entitlements
+    description: APIs for creating, read, update and delete Entitlement record in DocDB
+  - name: Get entitlement config
+    description: API for fetching Entitlement Configuration examples from Catalog
+  - name: getServiceAccountStatus
+    description: API for fetching Service Account Status Entitlements from DocDB
+  - name: transferAuthorization
+    description: API for transfering one click
+  - name: RCS Mobile Network Services
+    description: APIs for RCS Mobile Network Services
+paths:
+  /getEntitlement:
+    post:
+      tags:
+        - CRUD Entitlements
+      summary: This API is generally invoked by Nokia-ES to fetch the information of the Entitlements that are available for a particular subscriber.
+      requestBody:
+        description: This endpoint will help to retrieve information given a SUPI and/or PEI  <br /> - supi [Mandatory] <br /> - pei [Mandatory]
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              supi: '4567890'
+              pei: '123456123434635'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: We will get 200 response if we found something in DB or not
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                - supi: '4567890'
+                  pei: '123456123434635'
+                  deviceMake: APL
+                  osType: iOS
+                  requestingDeviceType: primary
+                  entitlements:
+                    VoLTE:
+                      serviceStatus: enabled
+                    VoWiFi:
+                      serviceStatus: enabled
+                      provStatus: 'false'
+                      tcStatus: 'false'
+                      eadrStatus: 'false'
+                    5gService:
+                      serviceStatus: enabled
+                    Tethering:
+                      serviceStatus: enabled
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal  Error
+  /getEntitlementConfig:
+    post:
+      tags:
+        - Get entitlement config
+      summary: This API is generally invoked by internal MS to fetch the config from the file
+      requestBody:
+        description: deviceMake [Mandatory] <br /> entitlements_set [Optional]
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/configRequest'
+            example:
+              deviceMake: APL
+              entitlements_set:
+                - VoWiFi
+                - VoLTE
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              example:
+                result: success
+                deviceMake: APL
+                osType: iOS
+                entitlements:
+                  VoLTE:
+                    serviceStatus: enabled
+                  VoWiFi:
+                    serviceStatus: enabled
+                    provStatus: 'false'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                deviceMake: ''
+                entitlements_set:
+                  - VoWiFi
+                  - VoLTE
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal  Error
+  /searchEntitlement:
+    post:
+      tags:
+        - CRUD Entitlements
+      summary: Search Entitlement either by PEI or SUPI  (send only one value in the request)
+      requestBody:
+        description: 'Search entitlement. Send only one value as mandatory <br /> - pei: Optional <br /> - supi: Optional'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              supi:
+                - '4567890'
+              pei:
+                - '123456123434635'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                - supi: '4567890'
+                  pei: '123456123434635'
+                  deviceMake: APL
+                  osType: iOS
+                  requestingDeviceType: primary
+                  entitlements:
+                    VoLTE:
+                      serviceStatus: enabled
+                    VoWiFi:
+                      serviceStatus: enabled
+                      provStatus: 'false'
+                      tcStatus: 'false'
+                      eadrStatus: 'false'
+                    5gService:
+                      serviceStatus: enabled
+                    Tethering:
+                      serviceStatus: enabled
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal  Error
+  /revCreateEntitlement:
+    post:
+      tags:
+        - CRUD Entitlements
+      summary: This API will be analogous to the createEntitlement, patch and replace entitlements with some modifications
+      requestBody:
+        description: 'Request body params: <br /> <br /> pei: Mandatory <br /> supi: Mandatory <br /> deviceMake: Optional (Mandatory in case of catalog:true) <br /> entitlements_set: Conditional (Mandatory in case of the catalog flag is true) <br /> remove: Conditional (Required in case of deleting/updating flags of any kind for a subscriber.) <br /> current_pei: Optional <br /> current_supi: Optional <br /> transferType: Optional <br /> iccid: Optional <br />'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/document'
+            example:
+              supi: '4567890'
+              pei: '123456123434635'
+              deviceMake: APL
+              entitlements_set:
+                - VoLTE
+                - VoWiFi
+                - 5gService
+                - TransferPlan
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: We will get 200 response if we got success or some failure scenarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                result: success
+                pei: '123456123434635'
+                supi: '4567890'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal Error
+  /createEntitlement:
+    post:
+      tags:
+        - CRUD Entitlements
+      summary: This API is generally invoked by SOM to create the information of the Entitlements for a particular subscriber.
+      requestBody:
+        description: 'Request body params <br /> <br /> pei: Mandatory <br /> supi: Mandatory <br /> deviceMake: Optional (Mandatory in case of catalog:true) <br /> requestingDeviceType: Optional <br /> entitlements: Mandatory <br /> entitlements_set: Conditional (Mandatory in case of the catalog flag is true) <br /> entitlements.serviceName: Mandatory <br /> entitlements.serviceName.serviceStatus: Mandatory <br /> entitlements.serviceName.provStatus: Optional <br /> entitlements.serviceName.tcStatus: Optional <br /> entitlements.serviceName.eadrStatus: Optional <br /> catalog: Optional <br />'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/document'
+            example:
+              supi: '4567890'
+              pei: '123456123434635'
+              deviceMake: APL
+              entitlements:
+                VoLTE:
+                  serviceStatus: enabled
+                VoWiFi:
+                  serviceStatus: enabled
+                  provStatus: 'false'
+                  tcStatus: 'false'
+                  eadrStatus: 'false'
+                5gService:
+                  serviceStatus: enabled
+                Tethering:
+                  serviceStatus: enabled
+              entitlements_set:
+                - VoLTE
+                - VoWiFi
+              catalog: 'true'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                result: success
+                pei: '123456123434635'
+                supi: '4567890'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal Error
+  /getServiceAccountStatus:
+    post:
+      tags:
+        - getServiceAccountStatus
+      summary: This API is generally invoked by Nokia-ES to fetch the Service status that is available for a particular subscriber.
+      requestBody:
+        description: pei [Mandatory] <br /> supi [Mandatory] <br /> entitlements [Mandatory]
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              pei: '103202256783458'
+              supi: '103202256783758'
+              entitlements:
+                - VoWiFi
+                - VoLTE
+                - 5gService
+                - Tethering
+                - TransferPlan
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal  Error
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal  Error
+  /replaceEntitlement:
+    post:
+      tags:
+        - CRUD Entitlements
+      summary: SOM generally invokes this API to cease and reprovide entitlement information for a subscriber.
+      requestBody:
+        description: 'Request body params <br /> <br /> pei: Mandatory <br /> supi: Mandatory <br /> current_supi: Conditional (Either current_pei or current_supi should be present) <br /> current_pei: Conditional (Either current_pei or current_supi should be present) <br /> deviceMake: Optional (Mandatory in case of catalog:true) <br /> requestingDeviceType: Optional <br /> entitlements: Mandatory <br /> entitlements_set: Conditional (Mandate in case of catalog true value condition) <br /> entitlements.serviceName: Mandatory <br /> entitlements.serviceName.serviceStatus: Mandatory <br /> entitlements.serviceName.provStatus: Optional <br /> entitlements.serviceName.tcStatus: Optional <br /> entitlements.serviceName.eadrStatus: Optional <br /> transferType: Optional <br /> iccid: Optional'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              pei: '1207561111118901'
+              supi: '1207898911111001'
+              current_pei: '12075611111189'
+              current_supi: '12078989111110'
+              deviceMake: APL
+              requestingDeviceType: secondary
+              entitlements:
+                VoLTE:
+                  serviceStatus: enabled
+                VoWiFi:
+                  serviceStatus: enabled
+                  provStatus: true
+                  tcStatus: true
+                  eadrStatus: true
+                5gService:
+                  serviceStatus: enabled
+                Tethering:
+                  serviceStatus: enabled
+              catalog: 'false'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                result: success
+                pei: '123456123434635'
+                supi: '4567890'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal Error
+  /patchEntitlement:
+    patch:
+      tags:
+        - CRUD Entitlements
+      summary: SOM or WHAPI generally invokes this API to update the information of the Entitlements for a particular subscriber.
+      requestBody:
+        description: 'Request body params <br /> <br /> pei: Mandatory <br /> supi: Mandatory <br /> remove (as Array): Optional <br /> entitlements: Optional <br /> entitlements_set: Conditional (Either remove or entitlements_set Mandate in case of catalog true value condition) <br /> remove (as String): Conditional (Either entitlements_set or remove is mandatory in case of catalog true) <br /> catalog: Optional <br /> deviceMake: Optional <br /> entitlements.serviceName: Mandatory <br /> entitlements.serviceName.serviceStatus: Conditional <br /> entitlements.serviceName.provStatus: Conditional <br /> entitlements.serviceName.tcStatus: Conditional <br /> entitlements.serviceName.eadrStatus: Conditional'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              pei: '123456'
+              supi: '123456'
+              remove:
+                - VoLTE
+                - VoWiFi
+                - 5gService
+                - Tethering
+                - TransferPlan
+              entitlements:
+                VoLTE:
+                  serviceStatus: disabled
+                VoWiFi:
+                  serviceStatus: disabled
+                5gService:
+                  serviceStatus: disabled
+                Tethering:
+                  serviceStatus: disabled
+                TransferPlan:
+                  serviceStatus: enabled
+              catalog: 'false'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              examples:
+                response1:
+                  result: success
+                  pei: '123456123434635'
+                  supi: '4567890'
+                response2:
+                  result: failure
+                  pei: ''
+                  supi: '4567890'
+                  error:
+                    errorCode: ENT002
+                    errorMessage: Invalid Data
+                response3:
+                  result: failure
+                  pei: ''
+                  supi: ''
+                  error:
+                    errorCode: ENT003
+                    errorMessage: Mandatory Parameter Not Received
+                response4:
+                  result: failure
+                  pei: '123456123434635'
+                  supi: '4567890'
+                  error:
+                    errorCode: ENT006
+                    errorMessage: PEI/SUPI does not exist
+                response5:
+                  result: failure
+                  pei: '123456'
+                  supi: '123456'
+                  error:
+                    errorCode: ENT007
+                    errorMessage: Duplicate Service Name/Service Status
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              examples:
+                response1:
+                  result: failure
+                  pei: '123456123434635'
+                  supi: '4567890'
+                  error:
+                    errorCode: ENT004
+                    errorMessage: Internal  Error
+                response2:
+                  result: failure
+                  current_pei: ''
+                  current_supi: ''
+                  pei: '123456123434635'
+                  supi: '4567890'
+                  error:
+                    errorCode: ENT010
+                    errorMessage: Could not Update Entitlement Document
+  /deleteEntitlement:
+    post:
+      tags:
+        - CRUD Entitlements
+      summary: Delete Entitlement. Used to delete entitlements from DocDB
+      requestBody:
+        description: pei [Mandatory] <br /> supi [Mandatory]
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              supi: '1234'
+              pei: '4321'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                result: success
+                pei: '123456123434635'
+                supi: '4567890'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                pei: '123456123434635'
+                supi: '4567890'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal Error
+  /transferAuthorization:
+    post:
+      tags:
+        - transferAuthorization
+      summary: This API is invoked by Nokia-ES to fetch the information of the transferType and ICCID value.
+      requestBody:
+        description: Request body params <br /> <br /> targetImei [Mandatory] <br /> targetEid [Optinal]
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              targetImei: '12345678912345'
+              targetEid: '12345678912345'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                result: success
+                transferType: OUT_OF_BAND_TRANSFER
+                iccid: '123456123434635'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                result: failure
+                targetImei: '123456123434635'
+                targetEid: '4567890123456'
+                error:
+                  errorCode: ENT004
+                  errorMessage: Internal Error
+  /OneClickErrorNotification:
+    post:
+      tags:
+        - OneClickErrorNotification
+      summary: This is an API Exposed by Device Entitlement Microservice. DSIM will receive the payload from AES and then pass on the topic and payload to Salesforce. Error Notifications will be received for getProfile and ConfirmOrder from Apple Entitlement Server.
+      requestBody:
+        description: 'Request body params <br /> <br /> newPei: Mandatory <br /> newEid: Mandatory <br /> operation: Mandatory <br /> errorCode: Optional <br /> errorMessage: Optional <br /> date: Mandatory<br /> customerID: Optional'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/gepost'
+            example:
+              newPEI: '123456'
+              newEID: '5679'
+              operation: <Dish endpoint name>, (getProfileConfigmap | confirmOrder)
+              errorCode: <from getProfileConfigmap's response, empty for confirmOrder>
+              errorMessage: <from getProfileConfigmap's response, empty for confirmOrder>
+              date: <yyyy-MM-dd'T'HH:mm:ss.SSS'Z'>
+              customerID: '123321123'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/document'
+              example:
+                status: 0
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                status: 1002
+  /automaticDeviceDetection:
+    post:
+      tags:
+        - automaticDeviceDetection
+      summary: This is an API Exposed by Device Entitlement Microservice. DSIM will receive the payload from ADD and then pass on the topic and payload to SOM.
+      requestBody:
+        description: 'Request body params <br /> <br /> imei: Optional <br /> msisdn: Optional <br /> apnList: Optional <br /> imsi: Mandatory <br /> commonMsisdn: Optional <br /> recordType: Mandatory <br /> recordSource: Mandatory <br /> timeStamp: Mandatory <br /> imeisv: Optional'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/automaticDeviceDetectionPayload'
+            example:
+              imsi: '12345678912345'
+              recordType: add
+              recordSource: 55
+              timeStamp: 1505907577000
+              imei: '123456789012345'
+              imeisv: '123456789012389'
+              msisdn: '123456789012345'
+              apnList:
+                - mmsAPN1
+                - wapAPN
+              commonMsisdn: '123456789012345'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/automaticDeviceDetectionResponse'
+              example:
+                status: 0
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example:
+                status: 1005
+  /mobilenetworkservices/v2/plmns/313340/serviceConfig:
+    get:
+      tags:
+        - RCS Mobile Network Services
+      summary: APIs for fetching Mobile Network Services
+      parameters:
+        - in: query
+          name: imei
+          description: The IMEI/PEI for looking up
+          schema:
+            type: string
+        - in: query
+          name: imsi
+          description: The IMSI/SUPI for looking up
+          schema:
+            type: string
+        - in: query
+          name: msisdn
+          description: The MSISDN for looking up
+          schema:
+            type: string
+        - in: query
+          name: iccid
+          description: The ICCID for looking up
+          schema:
+            type: string
+        - in: query
+          name: serviceName
+          description: The serviceName for looking up
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              example:
+                serviceName: RCS
+                rcsConfig:
+                  eligibilityStatus: ENABLED
+                  msisdn: '+12062221234'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              example: {}
+  /mobilenetworkservices/deactivateNotifcation:
+    post:
+      tags:
+        - RCS Mobile Network Services
+      summary: APIs for RCS Deactivate notification Mobile Network Services
+      parameters:
+        - in: query
+          required: true
+          name: serviceNotificationId
+          description: It is the unique ID of this service notification assigned by the caller of this method (that is, the MNO APIcs Gateway). This value must be 4-63 alphanumeric characters including [A-Z], [a-z], and [0-9]
+          schema:
+            type: string
+        - in: query
+          required: false
+          name: requestId
+          description: A unique ID, for example, a UUID, assigned by the caller for this request. Google uses this ID for logging only. This ID must be 6-128 characters and URL-safe.
+          schema:
+            type: string
+      requestBody:
+        description: 'Request body params <br /> <br /> imsi: Mandatory <br /> msisdn: Mandatory <br /> serviceName: Mandatory <br /> accountStatus: Mandatory <br /> eligibilityStatus: Mandatory <br /> notificationType: Optional'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/deactivateNotifcation'
+            example:
+              serviceName: RCS
+              accountStatus: TERMINATED
+              eligibilityStatus: DISABLED
+              msisdn: '+12062221234'
+              imsi: '310240789012345'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              example:
+                name: plmns/310240/serviceNotifications/4d8e0ad77e0cb1f121c8832bac94f850
+                serviceName: RCS
+                accountStatus: TERMINATED
+                eligibilityStatus: DISABLED
+                msisdn: '+12062221234'
+                imsi: '310240789012345'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              example:
+                error:
+                  code: 404
+                  message: User not found.
+                  status: NOT_FOUND
+components:
+  schemas:
+    gepost:
+      properties:
+        supi:
+          type: string
+        pei:
+          type: string
+    searchpost:
+      properties:
+        supi:
+          type: array
+    document:
+      properties:
+        supi:
+          type: string
+        pei:
+          type: string
+        deviceMake:
+          type: string
+        osType:
+          type: string
+        requestingDeviceType:
+          type: string
+        entitlements:
+          type: object
+    configRequest:
+      properties:
+        deviceMake:
+          type: string
+        entitlements_set:
+          type: array
+          properties:
+            VoLTE:
+              type: string
+            VoWiFi:
+              type: string
+            5gService:
+              type: string
+            Tethering:
+              type: string
+    configResponse:
+      properties:
+        deviceMake:
+          type: string
+        osType:
+          type: string
+        result:
+          type: string
+        entitlements_set:
+          type: array
+          properties:
+            VoLTE:
+              type: object
+            VoWiFi:
+              type: object
+            5gService:
+              type: object
+            Tethering:
+              type: object
+    automaticDeviceDetectionPayload:
+      properties:
+        imsi:
+          type: string
+        recordType:
+          type: string
+        recordSource:
+          type: integer
+        timeStamp:
+          type: integer
+        imei:
+          type: string
+        msisdn:
+          type: string
+        apnList:
+          type: array
+        commonMsisdn:
+          type: string
+    deactivateNotifcation:
+      properties:
+        imsi:
+          type: string
+        msisdn:
+          type: string
+        serviceName:
+          type: integer
+        accountStatus:
+          type: integer
+        eligibilityStatus:
+          type: string
+        notificationType:
+          type: string
+    automaticDeviceDetectionResponse:
+      properties:
+        status:
+          type: string
