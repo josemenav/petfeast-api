@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-_^1mavw=!n4f61eot*xap#a0&@)^)cn8q#6+8gd&g37xtpcowt
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['petfeast-api.onrender.com']
+ALLOWED_HOSTS = []
 
 
 # Application definition
