@@ -17,8 +17,17 @@ services:
       - DB_NAME=devdb
       - DB_USER=devuser
       - DB_PASSWORD=changeme
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_TIMEZONE=America/Mexico_City
+      - CELERY_ACCEPT_CONTENT=['json']
+      - CELERY_TASK_SERIALIZER=json
+      - TZ=America/Mexico_City
     depends_on:
       - db
+      - redis
+      - celery
+      - celery-beat
 
   db:
     image: postgres:13-alpine
@@ -28,6 +37,82 @@ services:
       - POSTGRES_DB=devdb
       - POSTGRES_USER=devuser
       - POSTGRES_PASSWORD=changeme
+      - TZ=America/Mexico_City 
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+    environment:
+      - TZ=America/Mexico_City 
+
+  celery:
+    build:
+      context: .
+      args:
+        - DEV=true
+    command: celery -A app.celery_app worker --loglevel=info -E
+    volumes:
+      - ./petfeast-api:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_TIMEZONE=America/Mexico_City
+      - DB_HOST=db
+      - DB_NAME=devdb
+      - DB_USER=devuser
+      - DB_PASSWORD=changeme
+      - TZ=America/Mexico_City  
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:  
+    build:
+      context: .
+      args:
+        - DEV=true
+    command: celery -A app.celery_app beat --loglevel=info --max-interval=10 --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./petfeast-api:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_TIMEZONE=America/Mexico_City
+      - TZ=America/Mexico_City
+      - DB_HOST=db
+      - DB_NAME=devdb
+      - DB_USER=devuser
+      - DB_PASSWORD=changeme
+    depends_on:
+      - redis
+      - celery
+      - db
+
+  flower:
+    build:
+      context: .
+      args:
+        - DEV=true
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    volumes:
+      - ./petfeast-api:/app
+    ports:
+      - "5555:5555"
+    environment:
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_TIMEZONE=America/Mexico_City
+      - TZ=America/Mexico_City
+      - DB_HOST=db
+      - DB_NAME=devdb
+      - DB_USER=devuser
+      - DB_PASSWORD=changeme
+    depends_on:
+      - redis
 
 volumes:
   dev-db-data:
+  redis-data:

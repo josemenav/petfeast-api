@@ -2,3 +2,11 @@ Django>=3.2.4,<3.3.0
 djangorestframework>=3.12.4,<3.13.0
 psycopg2>=2.8.6, <2.9
 drf-spectacular >= 0.15.1,<0.16
+celery>=5.0,<6.0
+redis>=4.0,<5.0
+gunicorn>=20.0,<21.0
+django-celery-beat==2.3.0
+pytz
+kombu
+django-celery-results
+flower>=1.2.0,<2.0.0

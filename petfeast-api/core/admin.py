@@ -40,3 +40,7 @@ class UserAdmin(BaseUserAdmin):
     )
 
 admin.site.register(models.User, UserAdmin)
+admin.site.register(models.Pet)
+admin.site.register(models.Dispenser)
+admin.site.register(models.FoodHabits)
+admin.site.register(models.DispenserConfig)

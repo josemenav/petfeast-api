@@ -1,6 +1,3 @@
-"""
-Database models
-"""
 from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser,
@@ -25,10 +22,56 @@ class UserManager(BaseUserManager):
         return user
 
 
-class User(AbstractBaseUser,PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     objects = UserManager()
     USERNAME_FIELD = 'email'
+
+
+class Pet(models.Model):
+    name = models.CharField(max_length=255, null=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="pets"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='unique_pet_name_per_user')
+        ]
+
+
+class Dispenser(models.Model):
+    pet = models.ForeignKey(
+        Pet, 
+        on_delete=models.CASCADE, 
+        related_name='dispensers', 
+        null=False
+    )
+    name = models.CharField(max_length=255)
+
+
+class DispenserConfig(models.Model):
+    dispenser = models.ForeignKey(
+        Dispenser,
+        on_delete=models.CASCADE,
+        related_name="configurations",
+        null=False
+    )
+    time = models.TimeField() 
+    amount = models.DecimalField(max_digits=5, decimal_places=2)
+
+
+class FoodHabits(models.Model):
+    pet = models.ForeignKey(
+        Pet, 
+        on_delete=models.CASCADE, 
+        related_name='food_habits', 
+        null=False
+    )
+    amount = models.DecimalField(max_digits=5, decimal_places=2)
+    timestamp = models.TimeField()

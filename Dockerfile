@@ -1,10 +1,13 @@
-FROM python:3.9-alpine3.13
+# Usar una versión más reciente de Python y Alpine
+FROM python:3.9-alpine3.18
 LABEL maintainer="joseantoniomendozanavarro@gmail.com"
 
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONUNBUFFERED=1
+
 
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./petfeast-api /app
+
 WORKDIR /app
 EXPOSE 8000
 
@@ -20,6 +23,7 @@ RUN python -m venv /py && \
         --disabled-password \
         --no-create-home \
         django-user
-ENV PATH="/py/bin:$PATH"
 
+ENV PATH="/py/bin:$PATH"
 USER django-user
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "petfeast_api.wsgi:application"]
