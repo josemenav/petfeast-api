@@ -9,4 +9,5 @@ django-celery-beat==2.3.0
 pytz
 kombu
 django-celery-results
+django-cors-headers==3.7.0
 flower>=1.2.0,<2.0.0
